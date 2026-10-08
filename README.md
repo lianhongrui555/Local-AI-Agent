@@ -34,6 +34,7 @@
 - Flask Web 聊天
 - pywebview 桌面应用
 - 微信小程序模拟器和局域网真机测试
+- Dify 实时天气查询工作流工具
 
 ## 目录结构
 
@@ -43,6 +44,7 @@ Local-AI-Agent/
 ├─ ollama-basic/           # 最基础的 Ollama 调用示例
 ├─ knowledge-base/         # 知识库测试资料
 ├─ mini-program/           # 微信小程序
+├─ workflows/              # 可导入 Dify 的工作流 DSL
 ├─ scripts/                # Docker 启动脚本
 └─ docs/                   # 部署、使用和排错文档
 ```
@@ -70,6 +72,7 @@ Local-AI-Agent/
 - `docs/07-mini-program.md`
 - `docs/08-troubleshooting.md`
 - `docs/09-engineering-log-2026-10-03.md`
+- `docs/10-dify-weather-tool.md`
 
 ## API Key 安全
 

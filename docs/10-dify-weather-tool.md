@@ -130,3 +130,59 @@ description
 ```
 
 不要多，也不要少。
+
+## 嵌入本地 Flask 网站
+
+本地 Flask 网站已经增加 `POST /api/weather` 接口和主页天气卡片。
+
+### 配置天气工作流 API Key
+
+1. 打开 Dify。
+2. 进入“实时天气查询——工具”应用。
+3. 打开 API 访问页面。
+4. 创建一个天气工作流专用 API Key。
+5. 复制 `app/.env.example` 为 `app/.env`。
+6. 在 `app/.env` 中填写：
+
+```text
+DIFY_API_URL=http://localhost/v1
+DIFY_API_KEY=你的聊天应用APIKey
+DIFY_WEATHER_API_KEY=你的天气工作流APIKey
+WEB_HOST=127.0.0.1
+WEB_PORT=5000
+```
+
+### 启动网站
+
+```powershell
+cd "D:\Local-AI-Agent\app"
+D:\python\python.exe -X utf8 web_app.py
+```
+
+浏览器打开：
+
+```text
+http://127.0.0.1:5000/
+```
+
+页面顶部会显示“实时天气查询”卡片，输入城市即可查询天气。
+
+### 局域网访问
+
+把 `app/.env` 中的监听地址改为：
+
+```text
+WEB_HOST=0.0.0.0
+```
+
+重启网站后，同一局域网设备可以访问：
+
+```text
+http://电脑局域网IP:5000/
+```
+
+### 安全说明
+
+- Dify API Key 只放在服务器端 `.env` 中。
+- `.env` 已被 `.gitignore` 忽略，不应上传 GitHub。
+- 浏览器只请求本地 `/api/weather`，不会拿到 Dify API Key。

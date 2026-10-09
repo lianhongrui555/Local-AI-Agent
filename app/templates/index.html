@@ -61,6 +61,85 @@
       font-weight: 700;
     }
 
+    /* 设置天气卡片外层的布局。 */
+    #weather-panel {
+      flex-shrink: 0;
+      padding: 16px 22px 18px;
+      border-bottom: 1px solid #e2ebf5;
+      background: linear-gradient(135deg, #f7fbff 0%, #eef8ff 100%);
+    }
+
+    /* 设置天气卡片标题区域。 */
+    .weather-title h2 { font-size: 16px; }
+    .weather-title p { margin-top: 3px; color: #74849a; font-size: 12px; }
+
+    /* 设置天气查询表单，覆盖底部聊天表单的默认样式。 */
+    #weather-form {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+    }
+
+    /* 设置城市输入框。 */
+    #weather-city {
+      flex: 1;
+      min-width: 0;
+      height: 44px;
+      padding: 0 14px;
+      color: #172033;
+      border: 1px solid #cfdcec;
+      border-radius: 12px;
+      outline: none;
+      font: inherit;
+    }
+
+    /* 设置城市输入框获得焦点时的样式。 */
+    #weather-city:focus { border-color: #2d8ef0; box-shadow: 0 0 0 3px rgba(45, 142, 240, 0.12); }
+
+    /* 设置天气查询按钮。 */
+    #weather-button {
+      height: 44px;
+      padding: 0 18px;
+      color: white;
+      background: #1769e0;
+      border: 0;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    /* 设置天气状态提示。 */
+    #weather-status { min-height: 18px; margin-top: 8px; color: #74849a; font-size: 12px; }
+
+    /* 设置天气结果卡片，默认隐藏，查询成功后显示。 */
+    #weather-result {
+      display: none;
+      margin-top: 10px;
+      padding: 14px;
+      border: 1px solid #dce7f5;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 8px 20px rgba(44, 75, 117, 0.06);
+    }
+    #weather-result.visible { display: block; }
+
+    /* 设置天气主要数据区域。 */
+    .weather-main { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .weather-location { color: #27364d; font-size: 13px; font-weight: 700; }
+    .weather-description { margin-top: 3px; color: #1769e0; font-size: 18px; font-weight: 700; }
+    .weather-temperature { color: #172033; font-size: 28px; font-weight: 800; }
+
+    /* 设置湿度、风速等补充数据。 */
+    .weather-details { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+    .weather-detail { padding: 8px 10px; border-radius: 10px; background: #f4f8fd; }
+    .weather-detail span { display: block; color: #74849a; font-size: 11px; }
+    .weather-detail strong { display: block; margin-top: 3px; color: #27364d; font-size: 14px; }
+
+    /* 设置完整天气文字说明。 */
+    .weather-text { margin-top: 11px; color: #52627a; font-size: 12px; line-height: 1.6; }
     /* 设置消息区域的滚动布局。 */
     #messages {
       flex: 1;
@@ -174,6 +253,48 @@
       <button id="new-chat" type="button">新对话</button>
     </header>
 
+    <!-- 天气卡片用于输入城市并展示实时天气结果。 -->
+    <section id="weather-panel">
+      <div class="weather-title">
+        <h2>实时天气查询</h2>
+        <p>输入城市名称，查看当前天气、温度、湿度和风速</p>
+      </div>
+
+      <!-- 天气表单只负责收集城市名称，不刷新整个网页。 -->
+      <form id="weather-form">
+        <input id="weather-city" type="text" maxlength="50" value="北京" placeholder="例如：北京、上海、广州" autocomplete="off">
+        <button id="weather-button" type="submit">查询天气</button>
+      </form>
+
+      <!-- 天气状态用于显示加载中或错误提示。 -->
+      <div id="weather-status">请输入城市名称后点击查询。</div>
+
+      <!-- 天气结果区域默认隐藏，查询成功后显示。 -->
+      <div id="weather-result" aria-live="polite">
+        <div class="weather-main">
+          <div>
+            <div id="weather-location" class="weather-location"></div>
+            <div id="weather-description" class="weather-description"></div>
+          </div>
+          <div id="weather-temperature" class="weather-temperature">--</div>
+        </div>
+        <div class="weather-details">
+          <div class="weather-detail">
+            <span>相对湿度</span>
+            <strong id="weather-humidity">--</strong>
+          </div>
+          <div class="weather-detail">
+            <span>风速</span>
+            <strong id="weather-wind">--</strong>
+          </div>
+          <div class="weather-detail">
+            <span>数据来源</span>
+            <strong>Open-Meteo</strong>
+          </div>
+        </div>
+        <div id="weather-text" class="weather-text"></div>
+      </div>
+    </section>
     <!-- messages 用来显示所有聊天消息。 -->
     <main id="messages" aria-live="polite">
       <div class="message assistant">
@@ -199,6 +320,17 @@
     const sendButton = document.getElementById("send-button");
     const statusElement = document.getElementById("status");
     const newChatButton = document.getElementById("new-chat");
+    const weatherForm = document.getElementById("weather-form");
+    const weatherCityInput = document.getElementById("weather-city");
+    const weatherButton = document.getElementById("weather-button");
+    const weatherStatus = document.getElementById("weather-status");
+    const weatherResult = document.getElementById("weather-result");
+    const weatherLocation = document.getElementById("weather-location");
+    const weatherDescription = document.getElementById("weather-description");
+    const weatherTemperature = document.getElementById("weather-temperature");
+    const weatherHumidity = document.getElementById("weather-humidity");
+    const weatherWind = document.getElementById("weather-wind");
+    const weatherText = document.getElementById("weather-text");
 
     // 保存 Dify 返回的对话编号，让连续消息保持上下文。
     let conversationId = "";
@@ -272,6 +404,69 @@
       }
     }
 
+    // 把后端返回的数值格式化成适合页面显示的文字。
+    function formatWeatherNumber(value, digits = 1) {
+      // 把输入转换为数字，并检查是否为有效数值。
+      const number = Number(value);
+      // 有效时保留指定小数位，无效时显示占位符。
+      return Number.isFinite(number) ? number.toFixed(digits) : "--";
+    }
+
+    // 请求后端天气接口并更新天气卡片。
+    async function queryWeather(city) {
+      // 查询期间禁用按钮，避免重复提交。
+      weatherButton.disabled = true;
+      // 显示加载状态。
+      weatherStatus.textContent = "正在查询天气，请稍候……";
+
+      try {
+        // 只把城市名称发送给 Flask 后端，Dify Key 不会进入浏览器。
+        const response = await fetch("/api/weather", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ city }),
+        });
+        // 把后端返回的数据转换为 JavaScript 对象。
+        const data = await response.json();
+        // 如果后端返回失败状态，就显示错误信息。
+        if (!response.ok) throw new Error(data.error || `请求失败：HTTP ${response.status}`);
+
+        // 更新地点、天气描述和温度。
+        weatherLocation.textContent = `${data.city || city} 实时天气`;
+        weatherDescription.textContent = data.description || "天气";
+        weatherTemperature.textContent = `${formatWeatherNumber(data.temperature)}°C`;
+        // 更新湿度和风速。
+        weatherHumidity.textContent = `${formatWeatherNumber(data.humidity, 0)}%`;
+        weatherWind.textContent = `${formatWeatherNumber(data.wind_speed)} km/h`;
+        // 显示包含体感温度和数据时间的完整说明。
+        weatherText.textContent = data.weather_text || "";
+        // 显示结果区域并更新成功提示。
+        weatherResult.classList.add("visible");
+        weatherStatus.textContent = "查询成功。";
+      } catch (error) {
+        // 查询失败时隐藏旧结果，并显示可读错误。
+        weatherResult.classList.remove("visible");
+        weatherStatus.textContent = `查询失败：${error.message}`;
+      } finally {
+        // 无论成功或失败都恢复按钮。
+        weatherButton.disabled = false;
+      }
+    }
+
+    // 监听天气表单提交，不刷新页面。
+    weatherForm.addEventListener("submit", (event) => {
+      // 阻止浏览器默认提交行为。
+      event.preventDefault();
+      // 读取城市名称并去掉首尾空白。
+      const city = weatherCityInput.value.trim();
+      // 空输入时显示提示，不调用后端。
+      if (!city) {
+        weatherStatus.textContent = "请输入城市名称。";
+        return;
+      }
+      // 发起天气查询。
+      queryWeather(city);
+    });
     // 监听表单提交事件。
     chatForm.addEventListener("submit", (event) => {
       // 阻止浏览器刷新页面。

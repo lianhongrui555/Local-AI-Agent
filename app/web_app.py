@@ -25,6 +25,9 @@ api_url = os.getenv("DIFY_API_URL")
 # 从环境变量读取 Dify API Key，密钥不会发送到浏览器。
 api_key = os.getenv("DIFY_API_KEY")
 
+# 从环境变量读取天气工作流专用的 Dify API Key；它只保存在后端。
+dify_weather_key = os.getenv("DIFY_WEATHER_API_KEY")
+
 # 检查 API 地址是否已经配置。
 if not api_url:
     # 如果缺少地址，就停止程序并提示用户检查 .env。
@@ -37,6 +40,9 @@ if not api_key or "请在这里" in api_key:
 
 # 拼接 Dify 聊天接口的完整地址。
 dify_endpoint = api_url.rstrip("/") + "/chat-messages"
+
+# 拼接 Dify 天气工作流的完整地址。
+dify_weather_endpoint = api_url.rstrip("/") + "/workflows/run"
 
 # 读取后端监听地址；默认只允许本机访问，真机测试时可设为 0.0.0.0。
 web_host = os.getenv("WEB_HOST", "127.0.0.1")
@@ -144,6 +150,84 @@ def chat():
         "conversation_id": result.get("conversation_id") or conversation_id,
     })
 
+# 定义天气查询接口，浏览器只把城市名称发送到这里。
+@app.post("/api/weather")
+def weather():
+    # 读取浏览器发来的 JSON 数据，并安全转换为字典。
+    data = request.get_json(silent=True) or {}
+
+    # 读取城市名称并去掉首尾空白。
+    city = str(data.get("city", "")).strip()
+
+    # 城市不能为空，否则直接返回 400。
+    if not city:
+        return jsonify({"error": "城市不能为空。"}), 400
+
+    # 防止过长的输入占用不必要的资源。
+    if len(city) > 50:
+        return jsonify({"error": "城市名称不能超过 50 个字符。"}), 400
+
+    # 天气工作流没有配置 Key 时，只影响天气接口，不影响聊天接口。
+    if not dify_weather_key or "请在这里" in dify_weather_key:
+        return jsonify({"error": "尚未配置天气工作流 API Key，请检查 .env。"}), 503
+
+    # 准备发送给 Dify 的请求头，API Key 只在后端使用。
+    headers = {
+        "Authorization": f"Bearer {dify_weather_key}",
+        "Content-Type": "application/json",
+    }
+
+    # 准备 Dify 工作流输入；city 对应工作流开始节点的变量名。
+    payload = {
+        "inputs": {"city": city},
+        "response_mode": "blocking",
+        "user": "local-weather-web",
+    }
+
+    # 捕获网络和 Dify 接口错误，给浏览器返回清楚的中文提示。
+    try:
+        # 天气查询通常很快，最多等待 60 秒。
+        response = requests.post(dify_weather_endpoint, headers=headers, json=payload, timeout=60)
+        response.raise_for_status()
+        result = response.json()
+    except requests.exceptions.Timeout:
+        return jsonify({"error": "查询天气超时，请稍后重试。"}), 504
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "无法连接 Dify，请确认 Docker Desktop 和 Dify 正在运行。"}), 503
+    except requests.exceptions.HTTPError as error:
+        status_code = error.response.status_code if error.response is not None else 502
+        return jsonify({"error": f"Dify 天气接口返回错误：HTTP {status_code}"}), 502
+    except requests.exceptions.RequestException:
+        return jsonify({"error": "调用 Dify 天气工作流失败。"}), 502
+
+    # 从 Dify 工作流结果中取出 data 和 outputs。
+    workflow_data = result.get("data") if isinstance(result, dict) else None
+    if not isinstance(workflow_data, dict):
+        return jsonify({"error": "Dify 返回的数据格式不正确。"}), 502
+
+    # 工作流执行失败时，返回工作流提供的错误信息。
+    workflow_status = workflow_data.get("status")
+    if workflow_status and workflow_status != "succeeded":
+        error_text = str(workflow_data.get("error") or "天气工作流执行失败。")
+        return jsonify({"error": error_text}), 502
+
+    outputs = workflow_data.get("outputs")
+    if not isinstance(outputs, dict):
+        return jsonify({"error": "Dify 没有返回 outputs 数据。"}), 502
+
+    # weather_text 是天气卡片必须展示的中文结果。
+    if not outputs.get("weather_text"):
+        return jsonify({"error": "Dify 没有返回 weather_text 字段。"}), 502
+
+    # 把结构化天气数据返回给浏览器，不返回任何 Dify 密钥。
+    return jsonify({
+        "city": city,
+        "weather_text": outputs.get("weather_text"),
+        "temperature": outputs.get("temperature"),
+        "humidity": outputs.get("humidity"),
+        "wind_speed": outputs.get("wind_speed"),
+        "description": outputs.get("description"),
+    })
 # 只有直接运行这个文件时才启动网页服务器。
 if __name__ == "__main__":
     # 只允许本机访问，端口使用 5000，调试模式关闭以避免重复启动。
